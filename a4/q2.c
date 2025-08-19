@@ -1,26 +1,23 @@
-/* prod_cons_openmp.cpp
-   Compile: g++ -fopenmp prod_cons_openmp.cpp -o prodcons
+/* q2.c
+   Compile: gcc -fopenmp q2.c -o prodcons
    Run: ./prodcons <buffer_size> <items_to_produce> <num_producers> <num_consumers>
 */
-#include <iostream>
-#include <vector>
+#include <stdio.h>
+#include <stdlib.h>
 #include <omp.h>
 
-using namespace std;
-
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     if (argc < 5) {
-        cerr << "Usage: " << argv[0]
-             << " <bufsize> <items> <producers> <consumers>\n";
+        printf("Usage: %s <bufsize> <items> <producers> <consumers>\n", argv[0]);
         return 1;
     }
 
-    int bufsize      = stoi(argv[1]);
-    int total_items  = stoi(argv[2]);
-    int nprod        = stoi(argv[3]);
-    int ncons        = stoi(argv[4]);
+    int bufsize      = atoi(argv[1]);
+    int total_items  = atoi(argv[2]);
+    int nprod        = atoi(argv[3]);
+    int ncons        = atoi(argv[4]);
 
-    vector<int> buffer(bufsize);
+    int *buffer = malloc(bufsize * sizeof(int));
     int in = 0, out = 0;
     int count = 0;
 
@@ -40,7 +37,7 @@ int main(int argc, char** argv) {
 
         if (tid < nprod) {
             // Producer threads
-            while (true) {
+            while (1) {
                 int myglobal;
                 #pragma omp atomic read
                 myglobal = global_produced;
@@ -63,9 +60,7 @@ int main(int argc, char** argv) {
                             #pragma omp atomic update
                             count++;
                             placed = 1;
-                            cout << "[Producer " << tid
-                                 << "] produced " << item
-                                 << " (count=" << count << ")\n";
+                            printf("[Producer %d] produced %d (count=%d)\n", tid, item, count);
                         }
                         omp_unset_lock(&lock_in);
                     }
@@ -73,7 +68,7 @@ int main(int argc, char** argv) {
             }
         } else {
             // Consumer threads
-            while (true) {
+            while (1) {
                 int mycon;
                 #pragma omp atomic read
                 mycon = global_consumed;
@@ -95,9 +90,7 @@ int main(int argc, char** argv) {
                             #pragma omp atomic update
                             count--;
                             got = 1;
-                            cout << "    [Consumer " << tid
-                                 << "] consumed " << item
-                                 << " (count=" << count << ")\n";
+                            printf("    [Consumer %d] consumed %d (count=%d)\n", tid, item, count);
                         }
                         omp_unset_lock(&lock_out);
                     }
@@ -107,10 +100,11 @@ int main(int argc, char** argv) {
     }
 
     double t1 = omp_get_wtime();
-    cout << "All done. Time: " << (t1 - t0) << " sec\n";
+    printf("All done. Time: %f sec\n", t1 - t0);
 
     omp_destroy_lock(&lock_in);
     omp_destroy_lock(&lock_out);
-
+    free(buffer);
     return 0;
 }
+
